@@ -15,9 +15,22 @@ package com.streambox.celldemo;
  * limitations under the License.
  */
 
-import com.streambox.celldemo.SimpleCommandLineParser;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.net.URL;
+import java.util.List;
+import javax.mail.*;
+import javax.security.*;
+import javax.mail.Service;
+
+import com.google.common.collect.*;
+import com.google.gdata.client.*;
 import com.google.gdata.client.spreadsheet.CellQuery;
 import com.google.gdata.client.spreadsheet.FeedURLFactory;
+import com.google.gdata.client.spreadsheet.ListQuery;
+import com.google.gdata.client.spreadsheet.SpreadsheetQuery;
 import com.google.gdata.client.spreadsheet.SpreadsheetService;
 import com.google.gdata.data.BaseEntry;
 import com.google.gdata.data.Link;
@@ -26,18 +39,14 @@ import com.google.gdata.data.batch.BatchStatus;
 import com.google.gdata.data.batch.BatchUtils;
 import com.google.gdata.data.spreadsheet.CellEntry;
 import com.google.gdata.data.spreadsheet.CellFeed;
+import com.google.gdata.data.spreadsheet.CustomElementCollection;
+import com.google.gdata.data.spreadsheet.ListEntry;
+import com.google.gdata.data.spreadsheet.ListFeed;
 import com.google.gdata.data.spreadsheet.SpreadsheetEntry;
 import com.google.gdata.data.spreadsheet.SpreadsheetFeed;
 import com.google.gdata.data.spreadsheet.WorksheetEntry;
 import com.google.gdata.util.AuthenticationException;
 import com.google.gdata.util.ServiceException;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.net.URL;
-import java.util.List;
 
 /**
  * Using this demo, you can see how GData can read and write to individual cells
@@ -476,24 +485,79 @@ public class CellDemo {
    * Runs the demo.
    *
    * @param args the command-line arguments
-   * @throws AuthenticationException if the service is unable to validate the
-   *         username and password.
+ * @throws ServiceException 
+ * @throws IOException 
    */
-  public static void main(String[] args) throws AuthenticationException {
-    SimpleCommandLineParser parser = new SimpleCommandLineParser(args);
-    String username = parser.getValue("username", "user", "u");
-    String password = parser.getValue("password", "pass", "p");
-    boolean help = parser.containsKey("help", "h");
+  public static void main(String[] args) throws IOException, ServiceException {
+    //SimpleCommandLineParser parser = new SimpleCommandLineParser(args);
+    //String username = parser.getValue("username", "user", "u");
+    //String password = parser.getValue("password", "pass", "p");
+    
+	  String username = args[0];
+	  String password = args[1];
+    
+    //boolean help = parser.containsKey("help", "h");
 
-    if (help || username == null || password == null) {
+    if (username == null || password == null) {
       usage();
       System.exit(1);
     }
 
-    CellDemo demo = new CellDemo(new SpreadsheetService("Cell Demo"),
-        System.out);
+    SpreadsheetService service = new SpreadsheetService("Cell Demo");
+    service.setUserCredentials(username,password);
+    
+    
+    FeedURLFactory urlFactory = FeedURLFactory.getDefault();
+    SpreadsheetQuery spreadsheetQuery = new SpreadsheetQuery(urlFactory.getSpreadsheetsFeedUrl());
+    
+    spreadsheetQuery.setTitleQuery("xpath for live/es");  //Set the name of spreadsheet which we would like to use
+    SpreadsheetFeed spreadsheetFeed = service.query(spreadsheetQuery,SpreadsheetFeed.class);
+    
+    SpreadsheetEntry spreadsheetEntry = spreadsheetFeed.getEntries().get(0);
+    
+    System.out.println("Name:" + spreadsheetEntry.getTitle().getPlainText());
+    
+    //get worksheet which I am looking for
+    WorksheetEntry worksheetEntry = spreadsheetEntry.getDefaultWorksheet();
+    
+    
+    //Seraching  inside wirksheet
+    
+    
+    /*
+    ListQuery listQuery = new ListQuery(worksheetEntry.getListFeedUrl());
+    int rowCount=1;
+    listQuery.setStartIndex(rowCount);
+    listQuery.setMaxResults(1);
+    ListFeed listFeed = service.query(listQuery, ListFeed.class);
+    //ListFeed listFeed = service.query(listQuery, ListFeed.class);
+    
+    
+    List<ListEntry> entries = listFeed.getEntries();
+    
+   ListEntry listEntry = entries.get(0);
+   
+  listEntry.delete();
+  */
+  
+    
+    ListQuery listQuery = new ListQuery(worksheetEntry.getListFeedUrl());
+    listQuery.setSpreadsheetQuery("xpath1 = as");
+    
+    //int rowCount=1;
+    //listQuery.setStartIndex(rowCount);
+    //listQuery.setMaxResults(1);
+    ListFeed listFeed = service.query(listQuery,ListFeed.class);
+    ListEntry listEntry = listFeed.getEntries().get(0);
+    CustomElementCollection elements = listEntry.getCustomElements();
+    System.out.println("Refer to:   " + elements.getValue("xpath1"));
+    System.out.println("Refer to:   " + elements.getValue("xpath2"));
+    System.out.println("Refer to:   " + elements.getValue("Livw1"));
+    
+  
+  List f =null;
+  Service s =null;
 
-    demo.run(username, password);
   }
 
   /**

@@ -20,7 +20,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
+
 import javax.mail.*;
 import javax.security.*;
 import javax.mail.Service;
@@ -79,6 +83,7 @@ public class CellDemo {
       " search adam                       [[full text query]]",
       " batch                             [[batch request]]",
       " exit"};
+
 
   /** Our view of Google Spreadsheets as an authenticated Google user. */
   private SpreadsheetService service;
@@ -539,10 +544,23 @@ public class CellDemo {
    
   listEntry.delete();
   */
-  
+    
+    
+    //*******************Declaration for userclass and hashtable**************************************//
+    UserandEslstypeClass  userclass[] = new UserandEslstypeClass[23];
+    //Hashtable<Key="xpath", UserandEslstypeClass>
+    //Hashtable hashtable = new Hashtable();
+    //HashMap<String, UserandEslstypeClass> hashtable = new HashMap<String, UserandEslstypeClass>();
+    
+    //ArrayList for storing above Hash
+    ArrayList<HashMap<String, UserandEslstypeClass>> arraylist = new ArrayList<HashMap<String, UserandEslstypeClass>>();
+    //**************************************************************//
     
     ListQuery listQuery = new ListQuery(worksheetEntry.getListFeedUrl());
-    listQuery.setSpreadsheetQuery("xpath1 = as");
+    
+    for(int i=1; i<23;i++){
+        
+    listQuery.setSpreadsheetQuery("label ="+i+"");
     
     //int rowCount=1;
     //listQuery.setStartIndex(rowCount);
@@ -550,17 +568,54 @@ public class CellDemo {
     ListFeed listFeed = service.query(listQuery,ListFeed.class);
     ListEntry listEntry = listFeed.getEntries().get(0);
     CustomElementCollection elements = listEntry.getCustomElements();
-    System.out.println("Refer to:   " + elements.getValue("xpath1"));
-    System.out.println("Refer to:   " + elements.getValue("xpath2"));
-    System.out.println("Refer to:   " + elements.getValue("Livw1"));
     
+       
+    //System.out.println("Refer to:   " + elements.getValue(""+ i +""));
+    
+    userclass[i] = new UserandEslstypeClass(elements.getValue("label"), elements.getValue("systemadminShouldSee"),elements.getValue("contributor"), elements.getValue("groupadmin"), elements.getValue("eslsType"));
+    
+    //System.out.println("Refer to:   " + elements.getValue("label"));
+    //System.out.println("Refer to:   " + elements.getValue("eslsType"));
+    //System.out.println("Refer to:   " + elements.getValue("xpath"));
+   // System.out.println("Refer to:   " + elements.getValue("Livw1"));
+    HashMap<String, UserandEslstypeClass> hashtable = new HashMap<String, UserandEslstypeClass>();
+    
+    
+    hashtable.put(elements.getValue("xpath"), userclass[i]);
+    
+    //System.out.println("Refer to:   " + hashtable.get(elements.getValue("xpath")).getlabel());
+    
+    //arraylist[i] = new ArrayList<HashMap<String, UserandEslstypeClass>>();
+    arraylist.add(hashtable);
+    
+    
+    }// end of for loop
   
+    
+    for(int i=1;i<arraylist.size();i++){
+    	
+    	//System.out.println("ArrayList:   " + arraylist.get(i));	
+    }
+    
+    HashMap<String, UserandEslstypeClass>  hash = arraylist.get(4);
+    System.out.println(hash.keySet());
+  
+    
+    
   List f =null;
   Service s =null;
 
+  //Hashtable<String, ArrayList<Object>> hashtable = Hashtable<String, ArrayLis<Object>>();
+  
+  
+  
+  
+  
+    
+	  
   }
 
-  /**
+/**
    * Prints out the usage.
    */
   private static void usage() {

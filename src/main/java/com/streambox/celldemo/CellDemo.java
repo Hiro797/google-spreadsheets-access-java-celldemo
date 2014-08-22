@@ -52,6 +52,8 @@ import com.google.gdata.data.spreadsheet.SpreadsheetFeed;
 import com.google.gdata.data.spreadsheet.WorksheetEntry;
 import com.google.gdata.util.AuthenticationException;
 import com.google.gdata.util.ServiceException;
+import java.net.*;
+
 
 /**
  * Using this demo, you can see how GData can read and write to individual cells

@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Set;
 
 import javax.mail.*;
 import javax.security.*;
@@ -172,145 +173,7 @@ public class CellDemo {
    *         Spreadsheets service.
    *
    */
-  public void loadSheet(BufferedReader reader) throws IOException,
-      ServiceException {
-    // Get the spreadsheet to load
-    SpreadsheetFeed feed = service.getFeed(factory.getSpreadsheetsFeedUrl(),
-        SpreadsheetFeed.class);
-    List spreadsheets = feed.getEntries();
-    int spreadsheetIndex = getIndexFromUser(reader, spreadsheets,
-        "spreadsheet");
-    SpreadsheetEntry spreadsheet = feed.getEntries().get(spreadsheetIndex);
-
-    // Get the worksheet to load
-    if (spreadsheet.getWorksheets().size() == 1) {
-      cellFeedUrl = spreadsheet.getWorksheets().get(0).getCellFeedUrl();
-    } else {
-      List worksheets = spreadsheet.getWorksheets();
-      int worksheetIndex = getIndexFromUser(reader, worksheets, "worksheet");
-      WorksheetEntry worksheet = (WorksheetEntry) worksheets
-          .get(worksheetIndex);
-      cellFeedUrl = worksheet.getCellFeedUrl();
-    }
-    System.out.println("Sheet loaded.");
-  }
-
-  /**
-   * Sets the particular cell at row, col to the specified formula or value.
-   *
-   * @param row the row number, starting with 1
-   * @param col the column number, starting with 1
-   * @param formulaOrValue the value if it doesn't start with an '=' sign; if it
-   *        is a formula, be careful that cells are specified in R1C1 format
-   *        instead of A1 format.
-   * @throws ServiceException when the request causes an error in the Google
-   *         Spreadsheets service.
-   * @throws IOException when an error occurs in communication with the Google
-   *         Spreadsheets service.
-   */
-  public void setCell(int row, int col, String formulaOrValue)
-      throws IOException, ServiceException {
-
-    CellEntry newEntry = new CellEntry(row, col, formulaOrValue);
-    service.insert(cellFeedUrl, newEntry);
-    out.println("Added!");
-  }
-
-  /**
-   * Prints out the specified cell.
-   *
-   * @param cell the cell to print
-   */
-  public void printCell(CellEntry cell) {
-    String shortId = cell.getId().substring(cell.getId().lastIndexOf('/') + 1);
-    out.println(" -- Cell(" + shortId + "/" + cell.getTitle().getPlainText()
-        + ") formula(" + cell.getCell().getInputValue() + ") numeric("
-        + cell.getCell().getNumericValue() + ") value("
-        + cell.getCell().getValue() + ")");
-  }
-
-  /**
-   * Shows all cells that are in the spreadsheet.
-   *
-   * @throws ServiceException when the request causes an error in the Google
-   *         Spreadsheets service.
-   * @throws IOException when an error occurs in communication with the Google
-   *         Spreadsheets service.
-   */
-  public void showAllCells() throws IOException, ServiceException {
-    CellFeed feed = service.getFeed(cellFeedUrl, CellFeed.class);
-
-    for (CellEntry entry : feed.getEntries()) {
-      printCell(entry);
-    }
-  }
-
-  /**
-   * Shows a particular range of cells, limited by minimum/maximum rows and
-   * columns.
-   *
-   * @param minRow the minimum row, inclusive, 1-based
-   * @param maxRow the maximum row, inclusive, 1-based
-   * @param minCol the minimum column, inclusive, 1-based
-   * @param maxCol the maximum column, inclusive, 1-based
-   * @throws ServiceException when the request causes an error in the Google
-   *         Spreadsheets service.
-   * @throws IOException when an error occurs in communication with the Google
-   *         Spreadsheets service.
-   */
-  public void showRange(int minRow, int maxRow, int minCol, int maxCol)
-      throws IOException, ServiceException {
-    CellQuery query = new CellQuery(cellFeedUrl);
-    query.setMinimumRow(minRow);
-    query.setMaximumRow(maxRow);
-    query.setMinimumCol(minCol);
-    query.setMaximumCol(maxCol);
-    CellFeed feed = service.query(query, CellFeed.class);
-
-    for (CellEntry entry : feed.getEntries()) {
-      printCell(entry);
-    }
-  }
-
-  /**
-   * Performs a full-text search on cells.
-   *
-   * @param fullTextSearchString a full text search string, with space-separated
-   *        keywords
-   * @throws ServiceException when the request causes an error in the Google
-   *         Spreadsheets service.
-   * @throws IOException when an error occurs in communication with the Google
-   *         Spreadsheets service.
-   */
-  public void search(String fullTextSearchString) throws IOException,
-      ServiceException {
-    CellQuery query = new CellQuery(cellFeedUrl);
-    query.setFullTextQuery(fullTextSearchString);
-    CellFeed feed = service.query(query, CellFeed.class);
-
-    out.println("Results for [" + fullTextSearchString + "]");
-
-    for (CellEntry entry : feed.getEntries()) {
-      printCell(entry);
-    }
-  }
-
-  /**
-   * Writes (to stdout) a list of the entries in the batch request in a human
-   * readable format.
-   *
-   * @param batchRequest the CellFeed containing entries to display.
-   */
-  private void printBatchRequest(CellFeed batchRequest) {
-    System.out.println("Current operations in batch");
-    for (CellEntry entry : batchRequest.getEntries()) {
-      String msg = "\tID: " + BatchUtils.getBatchId(entry) + " - "
-          + BatchUtils.getBatchOperationType(entry) + " row: "
-          + entry.getCell().getRow() + " col: " + entry.getCell().getCol()
-          + " value: " + entry.getCell().getInputValue();
-      System.out.println(msg);
-    }
-  }
+ 
 
   /**
    * Returns a CellEntry with batch id and operation type that will tell the
@@ -337,153 +200,6 @@ public class CellDemo {
     BatchUtils.setBatchOperationType(entry, BatchOperationType.UPDATE);
 
     return entry;
-  }
-
-  /**
-   * Prompts the user for a set of operations and submits them in a batch
-   * request.
-   *
-   * @param reader to read input from the keyboard.
-   *
-   * @throws ServiceException when the request causes an error in the Google
-   *         Spreadsheets service.
-   * @throws IOException when an error occurs in communication with the Google
-   *         Spreadsheets service.
-   */
-  public void processBatchRequest(BufferedReader reader)
-      throws IOException, ServiceException {
-
-    final String BATCH_PROMPT = "Enter set operations one by one, "
-        + "then enter submit to send the batch request:\n"
-        + " set row# col# value  [[add a set operation]]\n"
-        + " submit               [[submit the request]]";
-
-    CellFeed batchRequest = new CellFeed();
-
-    // Prompt user for operation
-    System.out.println(BATCH_PROMPT);
-    String operation = reader.readLine();
-    while (!operation.startsWith("submit")) {
-      String[] s = operation.split(" ", 4);
-      if (s.length != 4 || !s[0].equals("set")) {
-        System.out.println("Invalid command: " + operation);
-        operation = reader.readLine();
-        continue;
-      }
-
-      // Create a new cell entry and add it to the batch request.
-      int row = Integer.parseInt(s[1]);
-      int col = Integer.parseInt(s[2]);
-      String value = s[3];
-      CellEntry batchOperation = createUpdateOperation(row, col, value);
-      batchRequest.getEntries().add(batchOperation);
-
-      // Display the current entries in the batch request.
-      printBatchRequest(batchRequest);
-
-      // Prompt for another operation.
-      System.out.println(BATCH_PROMPT);
-      operation = reader.readLine();
-    }
-
-    // Get the batch feed URL and submit the batch request
-    CellFeed feed = service.getFeed(cellFeedUrl, CellFeed.class);
-    Link batchLink = feed.getLink(Link.Rel.FEED_BATCH, Link.Type.ATOM);
-    URL batchUrl = new URL(batchLink.getHref());
-    CellFeed batchResponse = service.batch(batchUrl, batchRequest);
-
-    // Print any errors that may have happened.
-    boolean isSuccess = true;
-    for (CellEntry entry : batchResponse.getEntries()) {
-      String batchId = BatchUtils.getBatchId(entry);
-      if (!BatchUtils.isSuccess(entry)) {
-        isSuccess = false;
-        BatchStatus status = BatchUtils.getBatchStatus(entry);
-        System.out.println("\n" + batchId + " failed (" + status.getReason()
-            + ") " + status.getContent());
-      }
-    }
-    if (isSuccess) {
-      System.out.println("Batch operations successful.");
-    }
-  }
-
-  /**
-   * Reads and executes one command.
-   *
-   * @param reader to read input from the keyboard
-   * @return false if the user quits, true on exception
-   */
-  public boolean executeCommand(BufferedReader reader) {
-    for (String s : COMMAND_HELP_MESSAGE) {
-      out.println(s);
-    }
-
-    System.err.print("Command: ");
-
-    try {
-      String command = reader.readLine();
-      String[] parts = command.trim().split(" ", 2);
-      String name = parts[0];
-      String parameters = parts.length > 1 ? parts[1] : "";
-
-      if (name.equals("list")) {
-        showAllCells();
-      } else if (name.equals("load")) {
-        loadSheet(reader);
-      } else if (name.equals("search")) {
-        search(parameters);
-      } else if (name.equals("range")) {
-        String[] s = parameters.split(" ", 4);
-        showRange(Integer.parseInt(s[0]), Integer.parseInt(s[1]), Integer
-            .parseInt(s[2]), Integer.parseInt(s[3]));
-      } else if (name.equals("set")) {
-        String[] s = parameters.split(" ", 3);
-        setCell(Integer.parseInt(s[0]), Integer.parseInt(s[1]), s[2]);
-      } else if (name.equals("batch")) {
-        processBatchRequest(reader);
-      } else if (name.startsWith("q") || name.startsWith("exit")) {
-        return false;
-      } else {
-        out.println("Unknown command.");
-      }
-    } catch (Exception e) {
-
-      // Show *exactly* what went wrong.
-      e.printStackTrace();
-    }
-    return true;
-  }
-
-  /**
-   * Starts up the demo and prompts for commands.
-   *
-   * @param username name of user to authenticate (e.g. yourname@gmail.com)
-   * @param password password to use for authentication
-   * @throws AuthenticationException if the service is unable to validate the
-   *         username and password.
-   */
-  public void run(String username, String password)
-      throws AuthenticationException {
-    for (String s : WELCOME_MESSAGE) {
-      out.println(s);
-    }
-
-    BufferedReader reader = new BufferedReader(
-        new InputStreamReader(System.in));
-
-    // Login and prompt the user to pick a sheet to use.
-    login(username, password);
-    try {
-      loadSheet(reader);
-    } catch (IOException e) {
-      e.printStackTrace();
-    } catch (ServiceException e) {
-      e.printStackTrace();
-    }
-
-    while (executeCommand(reader)) {
-    }
   }
 
   /**
@@ -572,7 +288,22 @@ public class CellDemo {
        
     //System.out.println("Refer to:   " + elements.getValue(""+ i +""));
     
-    userclass[i] = new UserandEslstypeClass(elements.getValue("label"), elements.getValue("systemadminShouldSee"),elements.getValue("contributor"), elements.getValue("groupadmin"), elements.getValue("eslsType"));
+    
+    String type = elements.getValue("eslsType");
+    String typefront=null;
+    String typebehind=null;
+    ArrayList<ArrayList<String>> storage = new ArrayList<ArrayList<String>>();
+    
+    int start = 0,end=type.length();
+    Divide(type, storage,start,end);
+   
+    
+    //System.out.println("Storage: "+storage);
+    
+    userclass[i] = new UserandEslstypeClass(elements.getValue("label"), elements.getValue("systemadminShouldSee"),elements.getValue("contributor"), elements.getValue("groupadmin"), storage);
+    
+    //userclass[i] = new UserandEslstypeClass(elements.getValue("label"), elements.getValue("systemadminShouldSee"),elements.getValue("contributor"), elements.getValue("groupadmin"), elements.getValue("eslsType"));
+    
     
     //System.out.println("Refer to:   " + elements.getValue("label"));
     //System.out.println("Refer to:   " + elements.getValue("eslsType"));
@@ -592,14 +323,19 @@ public class CellDemo {
     }// end of for loop
   
     
+    /*
     for(int i=1;i<arraylist.size();i++){
     	
     	//System.out.println("ArrayList:   " + arraylist.get(i));	
     }
+    */
     
-    HashMap<String, UserandEslstypeClass>  hash = arraylist.get(4);
+    HashMap<String, UserandEslstypeClass>  hash = arraylist.get(0);
     System.out.println(hash.keySet());
-  
+    Set<String> key1Set=hash.keySet();
+    String key1 = key1Set.toString();
+    System.out.println(key1);
+    System.out.println(hash.get("//a[text()='Default Routing Protocol: LDMP']").getrslstype().get(1));
     
     
   List f =null;
@@ -613,7 +349,40 @@ public class CellDemo {
   
     
 	  
-  }
+  }	
+
+private static void Divide(String type,ArrayList<ArrayList<String>> allset, int start, int end) {
+	if(type==null||start==end||start==end-1)
+		return;
+	
+	ArrayList<String> subset= new ArrayList<String>();
+	int current = start;
+	
+	while(type.charAt(current)!=','){
+		current++;
+		if(current >= end){
+			break;
+		}
+	}
+	
+	
+		subset.add(type.substring(start,current));
+	
+	
+	if(current!=end){
+		start = current+2;
+		while(start ==' ')
+			start++;
+	}else{
+		start = current;
+	}
+	
+	allset.add(subset);
+	Divide(type, allset,start,end);
+	
+	return;	
+}// end of Dvide()
+
 
 /**
    * Prints out the usage.
